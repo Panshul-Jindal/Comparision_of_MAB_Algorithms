@@ -13,7 +13,7 @@ class Agent():
     def update(self, chosen_arm, reward):
         raise NotImplementedError
     
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {}
     
 
@@ -65,7 +65,7 @@ class EpsilonGreedyAgent(Agent):
         # Incremental mean update formula
         self.est_means[chosen_arm] = old_mean + (1.0 / n) * (reward - old_mean)
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": self.est_means,
             "counts": self.counts,
@@ -111,7 +111,7 @@ class EpsilonDecreasingAgent(Agent):
         old_mean = self.est_means[chosen_arm]
         self.est_means[chosen_arm] = old_mean + (1.0 / n) * (reward - old_mean)
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         epsilon_t = min(1.0, (self.c * self.n_arms) / max(1, self.t))
         return {
             "est_means": self.est_means,
@@ -126,7 +126,7 @@ class ExplorationFirstAgent(Agent):
     Explore-Then-Commit (Exploration-First) Algorithm
     Reference: Algorithm box 3 in document
     """
-    def __init__(self, n_arms, m=10):
+    def __init__(self, n_arms, m=500):
         super().__init__(n_arms)
         self.m = m  # Plays per arm in exploration phase
         # Initialization: N_a(0) = 0, μ̂_a(0) = 0
@@ -164,7 +164,7 @@ class ExplorationFirstAgent(Agent):
         old_mean = self.est_means[chosen_arm]
         self.est_means[chosen_arm] = old_mean + (1.0 / n) * (reward - old_mean)
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": self.est_means,
             "counts": self.counts,
@@ -220,7 +220,7 @@ class UCB1Agent(Agent):
         old_mean = self.est_means[chosen_arm]
         self.est_means[chosen_arm] = old_mean + (1.0 / n) * (reward - old_mean)
     
-    def give_instance_values(self):
+    def get_instance_values(self):
         ucb_values = []
         for arm in range(self.n_arms):
             if self.counts[arm] > 0:
@@ -310,7 +310,7 @@ class UCB2Agent(Agent):
         if self.phase_pulls_remaining == 0 and self.counts[chosen_arm] == self._tau(self.r[chosen_arm] + 1):
             self.r[chosen_arm] += 1
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": self.est_means,
             "counts": self.counts,
@@ -395,7 +395,7 @@ class UCBTunedAgent(Agent):
         # Update sum of squares for variance computation
         self.sum_squares[chosen_arm] += reward ** 2
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": self.est_means,
             "counts": self.counts,
@@ -465,7 +465,7 @@ class MossAgent(Agent):
         old_mean = self.est_means[chosen_arm]
         self.est_means[chosen_arm] = old_mean + (1.0 / n) * (reward - old_mean)
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": self.est_means,
             "counts": self.counts,
@@ -560,7 +560,7 @@ class KLUCBAgent(Agent):
         old_mean = self.est_means[chosen_arm]
         self.est_means[chosen_arm] = old_mean + (1.0 / n) * (reward - old_mean)
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": self.est_means,
             "counts": self.counts,
@@ -628,7 +628,7 @@ class BayesUCBAgent(Agent):
         else:  # Treat as failure
             self.failures[chosen_arm] += 1
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": [
                 (self.alpha_0 + self.successes[arm]) / (self.alpha_0 + self.beta_0 + self.successes[arm] + self.failures[arm])
@@ -683,7 +683,7 @@ class ThompsonSamplingAgent(Agent):
         else:  # Treat as failure (for Bernoulli: reward = 0)
             self.failures[chosen_arm] += 1
 
-    def give_instance_values(self):
+    def get_instance_values(self):
         return {
             "est_means": [
                 (self.alpha_0 + self.successes[arm]) / (self.alpha_0 + self.beta_0 + self.successes[arm] + self.failures[arm])

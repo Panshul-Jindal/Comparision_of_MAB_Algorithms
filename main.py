@@ -2,6 +2,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import os
+import time
 
 import distributions
 import simulator
@@ -28,7 +29,7 @@ def makeLatestRunDirectory(base_dir=r"Runs/NamelessRuns"):
     os.makedirs(os.path.join(base_dir, latest_run))
     return os.path.join(base_dir, latest_run)
 
-def run(agent, mab, n_iterations, agent_name=None, mab_name=None):
+def run(agent, mab, n_iterations, agent_name=None, mab_name=None, instance_id=None, skipAnim=False):
 
     if agent_name is None or mab_name is None:
         if not os.path.exists(r"Runs/NamelessRuns"):
@@ -40,8 +41,12 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None):
             os.makedirs(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
             print(f"Created directory: {agent_name + '_' + mab_name}")
         latest_run_dir = makeLatestRunDirectory(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
+        if instance_id is not None:
+            latest_run_dir = os.path.join(latest_run_dir, f"{instance_id}")
+            os.makedirs(latest_run_dir)
 
     rewards = []
+    instance_internal_info = []
     FRAMES_TO_SAVE = 20
     SECONDS = 5
     skip_step = n_iterations // FRAMES_TO_SAVE if n_iterations >= FRAMES_TO_SAVE else 1
@@ -51,23 +56,31 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None):
 
     for iteration in range(n_iterations):
         chosen_arm = agent.select_arm()
-        if iteration in iterations_to_show:
+        if iteration in iterations_to_show and not skipAnim:
             mab.display_state_with_choice(chosen_arm, time_offset=iteration, to_save=True,
                                         save_path=os.path.join(latest_run_dir, f"{iteration+1}.png"))
         reward = mab.play_arm(chosen_arm)
         agent.update(chosen_arm, reward)
+
+        # Instance info
+        instance_internal_info.append(agent.get_instance_info())
+
         rewards.append(reward)
 
-    image_files = sorted([os.path.join(latest_run_dir, f) for f in os.listdir(latest_run_dir) if f.endswith('.png')])
-    image_files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+    if not skipAnim:
+        image_files = sorted([os.path.join(latest_run_dir, f) for f in os.listdir(latest_run_dir) if f.endswith('.png')])
+        image_files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
 
-    images = [iio.imread(filename) for filename in image_files]
+        images = [iio.imread(filename) for filename in image_files]
 
-    iio.mimsave(os.path.join(latest_run_dir,'animation.gif'), images, fps=FRAMES_TO_SAVE/SECONDS) # fps controls the speed of the animation
+        iio.mimsave(os.path.join(latest_run_dir,'animation.gif'), images, fps=FRAMES_TO_SAVE/SECONDS) # fps controls the speed of the animation
 
-    return rewards
+
+
+    return rewards, instance_internal_info
 
 if __name__ == "__main__":
+    INSTANCES_TO_RUN = 3
     # Creating our MAB environment
 
     p1, p2, p3 = random.random(), random.random(), random.random()
@@ -87,8 +100,15 @@ if __name__ == "__main__":
     our_agent = agents.UCB1Agent(n_arms=3)
 
     # Simulating interaction
-
-    run(our_agent, our_mab, n_iterations=10000, agent_name="UCB1", mab_name="BernoulliMAB")
+    start_time = time.time()
+    for instance_id in range(INSTANCES_TO_RUN):
+        instance_rewards, instance_info = run(our_agent, 
+                                              our_mab, 
+                                              n_iterations=10000, 
+                                              agent_name=f"UCB1_{instance_id}", 
+                                              mab_name="BernoulliMAB", 
+                                              instance_id=instance_id)
+    end_time = time.time()
 
     # TODO: optimise saving process, maybe optimise gif by directly creating gifs? or by storing data in a more efficient way
 
