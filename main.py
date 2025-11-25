@@ -1,32 +1,43 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import os
 
 import distributions
 import simulator
 import agents
 
-# Creating our MAB environment
+def run(agent, mab, n_iterations):
+    rewards = []
+    for iteration in range(n_iterations):
+        chosen_arm = agent.select_arm()
+        reward = mab.play_arm(chosen_arm)
+        agent.update(chosen_arm, reward)
+        rewards.append(reward)
+    return rewards
 
-p1, p2, p3 = random.random(), random.random(), random.random()
+if __name__ == "__main__":
+    # Creating our MAB environment
 
-print("Bernoulli probabilities for arms:", p1, p2, p3)
+    p1, p2, p3 = random.random(), random.random(), random.random()
 
-our_mab = simulator.MAB(n_arms=3,
-                        arm_distributions= 
-                        (distributions.Bernoulli(p1),
-                         distributions.Bernoulli(p2),
-                         distributions.Bernoulli(p3))
-                        )
+    print("Bernoulli probabilities for arms:", p1, p2, p3)
 
-# Creating a random agent
+    our_mab = simulator.MAB(n_arms=3,
+                            arm_distributions= 
+                            (distributions.Bernoulli(p1),
+                            distributions.Bernoulli(p2),
+                            distributions.Bernoulli(p3))
+                            )
 
-our_agent = agents.RandomAgent(n_arms=3)
+    # Creating a random agent
 
-# Simulating interaction
+    our_agent = agents.RandomAgent(n_arms=3)
 
-n_iterations = 1000
-for iteration in range(n_iterations):
-    chosen_arm = our_agent.select_arm()
-    reward = our_mab.play_arm(chosen_arm)
-    our_agent.update(chosen_arm, reward)
+    # Simulating interaction
+
+    n_iterations = 1000
+    for iteration in range(n_iterations):
+        chosen_arm = our_agent.select_arm()
+        reward = our_mab.play_arm(chosen_arm)
+        our_agent.update(chosen_arm, reward)
