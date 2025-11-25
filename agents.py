@@ -11,6 +11,8 @@ class Agent():
 
     def update(self, chosen_arm, reward):
         raise NotImplementedError
+    def give_instance_values(self):
+        return {}
     
 class RandomAgent(Agent):
     def __init__(self, n_arms):
@@ -43,6 +45,14 @@ class EpsilonGreedyAgent(Agent):
         new_value = ((n - 1) / n) * value + (1 / n) * reward
         self.est_means[chosen_arm] = new_value
 
+    def give_instance_values(self):
+        return {
+            "est_means": self.est_means,
+            "counts": self.counts,
+            "epsilon": self.epsilon
+        }
+
+
 class EpsilonDecreasingAgent(Agent):
     def __init__(self, n_arms, initial_epsilon=1.0, min_epsilon=0.1, decay_rate=0.99):
         super().__init__(n_arms)
@@ -68,54 +78,83 @@ class EpsilonDecreasingAgent(Agent):
         # Decay epsilon
         self.epsilon = max(self.min_epsilon, self.epsilon * self.decay_rate)
 
+    def give_instance_values(self):
+        return {
+            "est_means": self.est_means,
+            "counts": self.counts,
+            "epsilon": self.epsilon
+        }
+
 class ExplorationFirstAgent(Agent):
     def __init__(self, n_arms, exploration_rounds=100):
         super().__init__(n_arms)
         self.exploration_rounds = exploration_rounds
         self.total_counts = 0
         self.counts = [0] * n_arms
-        self.values = [0.0] * n_arms
+        self.est_means = [0.0] * n_arms
 
     def select_arm(self):
         if self.total_counts < self.exploration_rounds:
             return random.randint(0, self.n_arms - 1)
         else:
-            return self.values.index(max(self.values))
+            return self.est_means.index(max(self.values))
 
     def update(self, chosen_arm, reward):
         self.total_counts += 1
         self.counts[chosen_arm] += 1
         n = self.counts[chosen_arm]
-        value = self.values[chosen_arm]
+        value = self.est_means[chosen_arm]
         # Update the estimated value using incremental formula
         new_value = ((n - 1) / n) * value + (1 / n) * reward
-        self.values[chosen_arm] = new_value
+        self.est_means[chosen_arm] = new_value
+
+    def give_instance_values(self):
+        return {
+            "est_means": self.est_means,
+            "counts": self.counts,
+            "exploration_rounds": self.exploration_rounds,
+            "total_counts": self.total_counts
+        }
 
 class UCB1Agent(Agent):
     def __init__(self, n_arms):
         super().__init__(n_arms)
         self.counts = [0] * n_arms
-        self.values = [0.0] * n_arms
+        self.confidence_intervals = [0.0] * n_arms
+        self.ucb_values = [0.0] * n_arms
+        self.est_means = [0.0] * n_arms
         self.total_counts = 0
 
     def select_arm(self):
         for arm in range(self.n_arms):
             if self.counts[arm] == 0:
                 return arm
-        ucb_values = [0.0] * self.n_arms
         for arm in range(self.n_arms):
-            bonus = (2 * (math.log(self.total_counts) / self.counts[arm])) ** 0.5
-            ucb_values[arm] = self.values[arm] + bonus
-        return ucb_values.index(max(ucb_values))
+            confidence_interval = (2 * (math.log(self.total_counts) / self.counts[arm])) ** 0.5
+            self.ucb_values[arm] = self.est_means[arm] + confidence_interval
+            self.confidence_intervals[arm] = confidence_interval
+        return self.ucb_values.index(max(self.ucb_values))
 
     def update(self, chosen_arm, reward):
         self.counts[chosen_arm] += 1
         self.total_counts += 1
         n = self.counts[chosen_arm]
-        value = self.values[chosen_arm]
+        ucb_value = self.ucb_values[chosen_arm]
+        est_mean = self.est_means[chosen_arm]
+        confidence_interval = self.confidence_intervals[chosen_arm]
         # Update the estimated value using incremental formula
-        new_value = ((n - 1) / n) * value + (1 / n) * reward
-        self.values[chosen_arm] = new_value
+        self.est_means[chosen_arm] = ((n - 1) / n) * est_mean + (1 / n) * reward
+        self.confidence_intervals[chosen_arm] = (2 * (math.log(n-1) / n)) ** 0.5
+        self.ucb_values[chosen_arm] = self.est_means[chosen_arm] + self.confidence_intervals[chosen_arm]
+    
+    def give_instance_values(self):
+        return {
+            "est_means": self.est_means,
+            "counts": self.counts,
+            "ucb_values": self.ucb_values,
+            "confidence_intervals": self.confidence_intervals,
+            "total_counts": self.total_counts
+        }
 
 class UCB2Agent(Agent):
     def __init__(self, n_arms, alpha=0.5):
