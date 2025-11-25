@@ -87,7 +87,7 @@ class MAB_preload():
         plt.title('Upcoming Reward Values for Each Arm')
         plt.show()
     
-    def display_state_with_choice(self, chosen_arm, time_offset=0):
+    def display_state_with_choice(self, chosen_arm, time_offset=0, to_save=False, save_path=None):
         triangle = Polygon([[chosen_arm - 0.1, -0.3], [chosen_arm + 0.1, -0.3], [chosen_arm, -0.1]], facecolor='black')
 
         fig, ax = plt.subplots()
@@ -97,9 +97,13 @@ class MAB_preload():
         plt.colorbar(label='Reward Value')
         plt.xticks(range(self.n_arms))
         plt.xlabel('Arms')
-        plt.ylabel(f"Future Rewards {time_offset} steps ahead")
-        plt.title('Upcoming Reward Values for Each Arm')
-        plt.show()
+        plt.ylabel(f"Future Rewards ")
+        plt.title(f"Upcoming Reward Values for Each Arm\n({time_offset} steps past)")
+        if not to_save or save_path is None:
+            plt.show()
+        else:
+            plt.savefig(save_path)
+            plt.close()
 
 if __name__ == "__main__":    
     import distributions
