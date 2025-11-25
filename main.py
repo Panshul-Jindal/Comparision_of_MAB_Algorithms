@@ -51,7 +51,7 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None):
 
     images = [iio.imread(filename) for filename in image_files]
 
-    iio.mimsave(os.path.join(latest_run_dir,'animation.gif'), images, fps=4) # fps controls the speed of the animation
+    iio.mimsave(os.path.join(latest_run_dir,'animation.gif'), images, fps=n_iterations//5) # fps controls the speed of the animation
 
     return rewards
 
@@ -72,11 +72,13 @@ if __name__ == "__main__":
 
     # Creating a random agent
 
-    our_agent = agents.RandomAgent(n_arms=3)
+    our_agent = agents.UCB1Agent(n_arms=3)
 
     # Simulating interaction
 
-    run(our_agent, our_mab, n_iterations=20, agent_name="RandomAgent", mab_name="BernoulliMAB")
+    run(our_agent, our_mab, n_iterations=100, agent_name="UCB1", mab_name="BernoulliMAB")
+
+    # TODO: optimise saving process, maybe optimise gif by directly creating gifs? or by storing data in a more efficient way
 
     """n_iterations = 1000
     for iteration in range(n_iterations):
