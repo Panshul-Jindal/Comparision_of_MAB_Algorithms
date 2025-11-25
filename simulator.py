@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 
 # MAB simulator for an agent to interact with
 class MAB():
@@ -78,11 +79,25 @@ class MAB_preload():
     def display_state(self):
         fig, ax = plt.subplots()
         state = self.get_state()
-        plt.imshow(state, cmap='PiYG', aspect='auto')
+        plt.imshow(state, cmap='YlOrRd', aspect='auto')
         plt.colorbar(label='Reward Value')
         plt.xticks(range(self.n_arms))
         plt.xlabel('Arms')
         plt.ylabel('Future Rewards')
+        plt.title('Upcoming Reward Values for Each Arm')
+        plt.show()
+    
+    def display_state_with_choice(self, chosen_arm, time_offset=0):
+        triangle = Polygon([[chosen_arm - 0.1, -0.3], [chosen_arm + 0.1, -0.3], [chosen_arm, -0.1]], facecolor='black')
+
+        fig, ax = plt.subplots()
+        state = self.get_state()
+        ax.add_patch(triangle)
+        plt.imshow(state, cmap='YlOrRd', aspect='auto')
+        plt.colorbar(label='Reward Value')
+        plt.xticks(range(self.n_arms))
+        plt.xlabel('Arms')
+        plt.ylabel(f"Future Rewards {time_offset} steps ahead")
         plt.title('Upcoming Reward Values for Each Arm')
         plt.show()
 
@@ -98,7 +113,7 @@ if __name__ == "__main__":
     ]
 
     mab = MAB_preload(n_arms, arm_distributions, history_length=5)
-    mab.display_state()
+    mab.display_state_with_choice(1,2)
     reward = mab.play_arm(1)
     print(f"Played arm 1, received reward: {reward}")
     mab.display_state()
