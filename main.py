@@ -9,7 +9,9 @@ import agents
 
 import imageio as iio
 
-def makeLatestRunDirectory(base_dir="NamelessRuns"):
+BASE_RUN_DIR = r"Runs"
+
+def makeLatestRunDirectory(base_dir=r"Runs/NamelessRuns"):
     """Get the latest run directory based on numeric names."""
     if not os.path.exists(base_dir):
         return None
@@ -26,12 +28,15 @@ def makeLatestRunDirectory(base_dir="NamelessRuns"):
 def run(agent, mab, n_iterations, agent_name=None, mab_name=None):
 
     if agent_name is None or mab_name is None:
-        latest_run_dir = makeLatestRunDirectory()
+        if not os.path.exists(r"Runs/NamelessRuns"):
+            os.makedirs(r"Runs/NamelessRuns")
+            print(f"Created directory: NamelessRuns")
+        latest_run_dir = makeLatestRunDirectory(r"Runs/NamelessRuns")
     else:
-        if not os.path.exists(agent_name + "_" + mab_name):
-            os.makedirs(agent_name + "_" + mab_name)
+        if not os.path.exists(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name)):
+            os.makedirs(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
             print(f"Created directory: {agent_name + '_' + mab_name}")
-        latest_run_dir = makeLatestRunDirectory(agent_name + "_" + mab_name)
+        latest_run_dir = makeLatestRunDirectory(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
 
     rewards = []
     for iteration in range(n_iterations):
