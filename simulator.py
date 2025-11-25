@@ -87,13 +87,13 @@ class MAB_preload():
         plt.title('Upcoming Reward Values for Each Arm')
         plt.show()
     
-    def display_state_with_choice(self, chosen_arm, time_offset=0, to_save=False, save_path=None):
+    def display_state_with_choice(self, chosen_arm, time_offset=0, to_save=False, save_path=None, skip=False):
         triangle = Polygon([[chosen_arm - 0.1, -0.3], [chosen_arm + 0.1, -0.3], [chosen_arm, -0.1]], facecolor='black')
 
         fig, ax = plt.subplots()
         state = self.get_state()
         ax.add_patch(triangle)
-        plt.imshow(state, cmap='YlOrRd', aspect='auto')
+        plt.imshow(state, cmap='YlOrRd', aspect='auto', vmin=0, vmax=1)
         plt.colorbar(label='Reward Value')
         plt.xticks(range(self.n_arms))
         plt.xlabel('Arms')

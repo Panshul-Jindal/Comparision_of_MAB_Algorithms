@@ -11,6 +11,9 @@ import imageio as iio
 
 BASE_RUN_DIR = r"Runs"
 
+def exp_indices(n, f):
+    return np.unique(np.round(np.logspace(0, np.log10(n), f))).astype(int)
+
 def makeLatestRunDirectory(base_dir=r"Runs/NamelessRuns"):
     """Get the latest run directory based on numeric names."""
     if not os.path.exists(base_dir):
@@ -39,19 +42,28 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None):
         latest_run_dir = makeLatestRunDirectory(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
 
     rewards = []
+    FRAMES_TO_SAVE = 20
+    SECONDS = 5
+    skip_step = n_iterations // FRAMES_TO_SAVE if n_iterations >= FRAMES_TO_SAVE else 1
+    #iterations_to_show = set(range(0, n_iterations, skip_step))
+    iterations_to_show = set(exp_indices(n_iterations, FRAMES_TO_SAVE-1))
+    iterations_to_show.add(n_iterations-1)
+
     for iteration in range(n_iterations):
         chosen_arm = agent.select_arm()
-        mab.display_state_with_choice(chosen_arm, time_offset=0, to_save=True,
-                                     save_path=os.path.join(latest_run_dir, f"{iteration+1}.png"))
+        if iteration in iterations_to_show:
+            mab.display_state_with_choice(chosen_arm, time_offset=iteration, to_save=True,
+                                        save_path=os.path.join(latest_run_dir, f"{iteration+1}.png"))
         reward = mab.play_arm(chosen_arm)
         agent.update(chosen_arm, reward)
         rewards.append(reward)
 
     image_files = sorted([os.path.join(latest_run_dir, f) for f in os.listdir(latest_run_dir) if f.endswith('.png')])
+    image_files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
 
     images = [iio.imread(filename) for filename in image_files]
 
-    iio.mimsave(os.path.join(latest_run_dir,'animation.gif'), images, fps=n_iterations//5) # fps controls the speed of the animation
+    iio.mimsave(os.path.join(latest_run_dir,'animation.gif'), images, fps=FRAMES_TO_SAVE/SECONDS) # fps controls the speed of the animation
 
     return rewards
 
@@ -76,7 +88,7 @@ if __name__ == "__main__":
 
     # Simulating interaction
 
-    run(our_agent, our_mab, n_iterations=100, agent_name="UCB1", mab_name="BernoulliMAB")
+    run(our_agent, our_mab, n_iterations=10000, agent_name="UCB1", mab_name="BernoulliMAB")
 
     # TODO: optimise saving process, maybe optimise gif by directly creating gifs? or by storing data in a more efficient way
 
