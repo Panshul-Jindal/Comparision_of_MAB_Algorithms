@@ -234,6 +234,8 @@ if __name__ == "__main__":
     # Simulating interaction for FAR mab
     sim_start_time = time.time()
 
+    regrets_of_all_agents = []
+
     # FAR
 
     print("Starting Simulation on Far")
@@ -306,17 +308,43 @@ if __name__ == "__main__":
         plt.close()
           
         mean_agent_regret = np.mean(np.array(agent_regret_seq_all), axis = 0)
+        regrets_of_all_agents.append(mean_agent_regret)
         
         plt.figure()
         plt.plot(range(1, ITERATION_COUNT+1), mean_agent_regret)
         plt.xlabel("Iterations")
         plt.ylabel("Regret")
         plt.title(f"Average Regret of {agent_name} on BernoulliMAB Far")
+        plt.legend(fontsize=4)
         plt.savefig(os.path.join(plot_dir, "Regret"), dpi=900)
         plt.close()    
 
+    plt.figure()
+    agent_colors =  [
+    "#1f77b4",  # blue
+    "#ff7f0e",  # orange
+    "#2ca02c",  # green
+    "#d62728",  # red
+    "#9467bd",  # purple
+    "#8c564b",  # brown
+    "#e377c2",  # pink
+    "#7f7f7f",  # gray
+    "#bcbd22",  # olive
+    "#17becf"   # cyan
+    ]
+
+    plt.figure()
+    for agent_idx in range(len(agents_to_test)):
+        agent_name = agents_to_test[agent_idx][0]
+        plt.plot(range(1,ITERATION_COUNT+1), regrets_of_all_agents[agent_idx], color=agent_colors[agent_idx], label= agent_name)
+    plt.xlabel("Iterations")
+    plt.ylabel("Regret on Far MAB")
+    plt.title("Average Regret per Agent on Far MAB")
+    plt.savefig(makeLatestRunDirectory(os.path.join(BASE_PLOT_DIR, "FarMAB")))
+    plt.close()
 
     # CLOSE
+    regrets_of_all_agents = []
     for agent_name, agent_maker in agents_to_test[:]:
         print(f"Running simulations for Agent: {agent_name} on Near MAB")
         agent_start_time = time.time()
@@ -393,15 +421,23 @@ if __name__ == "__main__":
         plt.ylabel("Regret")
         plt.title(f"Average Regret of {agent_name} on BernoulliMAB Near")
         plt.savefig(os.path.join(plot_dir, "Regret"), dpi=900)
-        plt.close()    
+        plt.close()   
+
+    
+    plt.figure()
+    for agent_idx in range(len(agents_to_test)):
+        agent_name = agents_to_test[agent_idx][0]
+        plt.plot(range(1,ITERATION_COUNT+1), regrets_of_all_agents[agent_idx], color=agent_colors[agent_idx], label= agent_name)
+    plt.xlabel("Iterations")
+    plt.ylabel("Regret on Near MAB")
+    plt.title("Average Regret per Agent on Near MAB")
+    plt.legend(fontsize=4)
+    plt.savefig(makeLatestRunDirectory(os.path.join(BASE_PLOT_DIR, "NearMAB")))
+    plt.close() 
+
+    
 
         
     print(f"Simulation completed in {time.time() - sim_start_time:.2f} seconds.")
 
-    
 
-    """n_iterations = 1000
-    for iteration in range(n_iterations):
-        chosen_arm = our_agent.select_arm()
-        reward = our_mab.play_arm(chosen_arm)
-        our_agent.update(chosen_arm, reward)"""
