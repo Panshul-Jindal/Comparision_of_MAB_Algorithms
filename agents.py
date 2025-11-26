@@ -31,20 +31,19 @@ class RandomAgent(Agent):
 
 class EpsilonGreedyAgent(Agent):
     """
-    Epsilon-Greedy Algorithm (Fixed ε)
-    Reference: Algorithm box 1 in document
+    Epsilon-Greedy Algorithm (Fixed epsilon)
     """
     def __init__(self, n_arms, epsilon=0.1):
         super().__init__(n_arms)
         self.epsilon = epsilon
-        # Initialization: N_a(0) = 0, μ̂_a(0) = 0 for all arms
-        self.counts = [0] * n_arms  # N_a(t)
-        self.est_means = [0.0] * n_arms  # μ̂_a(t)
+        # Initializing to zero
+        self.counts = [0] * n_arms  
+        self.est_means = [0.0] * n_arms  
 
     def select_arm(self):
         """
-        Algorithm Step 1: With probability (1-ε), select argmax μ̂_a(t-1)
-                         With probability ε, select uniformly at random
+        With probability (1-epsilon), select argmax of current estimates
+        With probability epsilon, select uniformly at random
         """
         if random.random() > self.epsilon:
             # Exploit: choose best arm (greedy)
@@ -56,8 +55,6 @@ class EpsilonGreedyAgent(Agent):
     def update(self, chosen_arm, reward):
         """
         Algorithm Step 3: Update counts and estimated means
-        N_A_t(t) = N_A_t(t-1) + 1
-        μ̂_A_t(t) = μ̂_A_t(t-1) + (1/N_A_t(t))(X_t - μ̂_A_t(t-1))
         """
         self.counts[chosen_arm] += 1
         n = self.counts[chosen_arm]
@@ -67,29 +64,28 @@ class EpsilonGreedyAgent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "epsilon": self.epsilon
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts
         }
 
 
 class EpsilonDecreasingAgent(Agent):
     """
     Epsilon-Decreasing Algorithm
-    Reference: Algorithm box 2 in document
+    TAKING LINEAR DECAY
     """
     def __init__(self, n_arms, c=1.0):
         super().__init__(n_arms)
         self.c = c  # Constant for epsilon schedule
-        # Initialization: N_a(0) = 0, μ̂_a(0) = 0
+        # Initializing to zero
         self.counts = [0] * n_arms
         self.est_means = [0.0] * n_arms
         self.t = 0  # Current round
 
     def select_arm(self):
         """
-        Algorithm Step 1: Compute ε_t = min{1, cK/t}
-        Algorithm Step 2: With probability (1-ε_t), exploit; with probability ε_t, explore
+        compute epsilon_t
+        Apply epsilon-greedy with epsilon_t
         """
         self.t += 1
         # Compute exploration probability: ε_t = min{1, cK/t}
@@ -104,7 +100,7 @@ class EpsilonDecreasingAgent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Algorithm Step 3: Update N_a(t) and μ̂_a(t) as in fixed-ε algorithm
+        Same as standard epsilon-greedy update
         """
         self.counts[chosen_arm] += 1
         n = self.counts[chosen_arm]
@@ -114,22 +110,20 @@ class EpsilonDecreasingAgent(Agent):
     def get_instance_values(self):
         epsilon_t = min(1.0, (self.c * self.n_arms) / max(1, self.t))
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "epsilon_t": epsilon_t,
-            "t": self.t
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
+            #"Epsilon": epsilon_t,
         }
 
 
 class ExplorationFirstAgent(Agent):
     """
     Explore-Then-Commit (Exploration-First) Algorithm
-    Reference: Algorithm box 3 in document
     """
     def __init__(self, n_arms, m=500):
         super().__init__(n_arms)
         self.m = m  # Plays per arm in exploration phase
-        # Initialization: N_a(0) = 0, μ̂_a(0) = 0
+        # Initializing to zero
         self.counts = [0] * n_arms
         self.est_means = [0.0] * n_arms
         self.total_counts = 0
@@ -139,7 +133,7 @@ class ExplorationFirstAgent(Agent):
     def select_arm(self):
         """
         Exploration phase: Play each arm exactly m times
-        Commit phase: After mK rounds, play a* = argmax μ̂_a(mK) forever
+        Commit phase: After mK rounds, play best arm forever
         """
         # Exploration phase: ensure each arm is played m times
         if not self.exploration_done:
@@ -155,8 +149,7 @@ class ExplorationFirstAgent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Update: N_a(t) = N_a(t-1) + 1
-                μ̂_a(t) = μ̂_a(t-1) + (1/N_a(t))(X_t - μ̂_a(t-1))
+        Standard incremental update of counts and estimated means
         """
         self.counts[chosen_arm] += 1
         self.total_counts += 1
@@ -166,32 +159,27 @@ class ExplorationFirstAgent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "m": self.m,
-            "exploration_done": self.exploration_done,
-            "best_arm": self.best_arm,
-            "total_counts": self.total_counts
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
+            #"exploration_done": self.exploration_done, #TODO
         }
 
 
 class UCB1Agent(Agent):
     """
     UCB1 Algorithm
-    Reference: Algorithm box 4 in document
     """
     def __init__(self, n_arms):
         super().__init__(n_arms)
-        # Initialization: Play each arm once (done in select_arm)
-        self.counts = [0] * n_arms  # N_a(t)
-        self.est_means = [0.0] * n_arms  # μ̂_a(t)
+
+        self.counts = [0] * n_arms
+        self.est_means = [0.0] * n_arms
         self.total_counts = 0
 
     def select_arm(self):
         """
         Initialization: Play each arm once
-        Algorithm Step 1: Compute U_a(t) = μ̂_a(t-1) + sqrt(2*log(t) / N_a(t-1))
-        Algorithm Step 2: Select A_t ∈ argmax_a U_a(t)
+        Compute UCB value for each arm, then choose arm with max UCB value
         """
         # Initialization: play each arm once
         for arm in range(self.n_arms):
@@ -201,7 +189,6 @@ class UCB1Agent(Agent):
         # Compute UCB index for each arm
         ucb_values = [0.0] * self.n_arms
         for arm in range(self.n_arms):
-            # U_a(t) = μ̂_a(t-1) + sqrt(2*log(t) / N_a(t-1))
             exploration_bonus = math.sqrt((2 * math.log(self.total_counts)) / self.counts[arm])
             ucb_values[arm] = self.est_means[arm] + exploration_bonus
         
@@ -210,9 +197,7 @@ class UCB1Agent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Algorithm Step 3: Update N_A_t(t) and μ̂_A_t(t)
-        N_A_t(t) = N_A_t(t-1) + 1
-        μ̂_A_t(t) = μ̂_A_t(t-1) + (1/N_A_t(t))(X_t - μ̂_A_t(t-1))
+        Standard incremental update of counts and estimated means
         """
         self.counts[chosen_arm] += 1
         self.total_counts += 1
@@ -230,40 +215,38 @@ class UCB1Agent(Agent):
                 ucb_values.append(float('inf'))
         
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "ucb_values": ucb_values,
-            "confidence_intervals": [ucb - est for ucb, est in zip(ucb_values, self.est_means)],
-            "total_counts": self.total_counts
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
+            "UCB Values Of Arms": ucb_values,
+            "Confidence Padding per Arm": [ucb - est for ucb, est in zip(ucb_values, self.est_means)]
         }
 
 
 class UCB2Agent(Agent):
     """
     UCB2 Algorithm
-    Reference: Algorithm box 5 in document
     """
     def __init__(self, n_arms, alpha=0.5):
         super().__init__(n_arms)
-        self.alpha = alpha  # Parameter α > 0
-        # Initialization: N_a(0) = 0, r_a = 0, μ̂_a(0) = 0
-        self.counts = [0] * n_arms  # N_a(t)
-        self.est_means = [0.0] * n_arms  # μ̂_a(t)
+        self.alpha = alpha  # Exploration parameter
+        # Initializating to zero
+        self.counts = [0] * n_arms  
+        self.est_means = [0.0] * n_arms  
         self.r = [0] * n_arms  # Epoch counter r_a for each arm
         self.total_counts = 0
         self.current_arm = None  # Arm currently in phase
         self.phase_pulls_remaining = 0  # Pulls remaining in current phase
 
     def _tau(self, r):
-        """Definition: τ(r) = ⌈(1+α)^r⌉"""
+        """Epoch length function tau represents the epoch length for epoch index r."""
         return math.ceil((1 + self.alpha) ** r)
 
     def select_arm(self):
         """
-        Algorithm Step 1: For every arm with N_a(t-1) = 0, play it once to initialize
-        Algorithm Step 2: Compute U_a(t) = μ̂_a(t-1) + sqrt((1+α)*log(e*t/τ(r_a)) / (2*τ(r_a)))
-        Algorithm Step 3: Let a* ∈ argmax_a U_a(t)
-        Algorithm Step 4: Play arm a* repeatedly until N_a*(t) = τ(r_a* + 1)
+        Play each arm once,
+        Then for each arm compute UCB2 index,
+        Select arm with max UCB2 index,
+        Set up phase to play this arm until total pulls exceed next epoch length, then recompute.
         """
         # If currently in a phase, continue pulling the current arm
         if self.phase_pulls_remaining > 0:
@@ -281,7 +264,6 @@ class UCB2Agent(Agent):
         ucb2_values = [0.0] * self.n_arms
         for arm in range(self.n_arms):
             tau_r = self._tau(self.r[arm])
-            # U_a(t) = μ̂_a(t-1) + sqrt((1+α)*log(e*t/τ(r_a)) / (2*τ(r_a)))
             log_term = math.log(math.e * self.total_counts / tau_r)
             exploration_bonus = math.sqrt(((1 + self.alpha) * log_term) / (2 * tau_r))
             ucb2_values[arm] = self.est_means[arm] + exploration_bonus
@@ -289,7 +271,7 @@ class UCB2Agent(Agent):
         # Step 3: Select arm with maximum UCB2 value
         self.current_arm = ucb2_values.index(max(ucb2_values))
         
-        # Step 4: Set up phase - play this arm until N_a = τ(r_a + 1)
+        # Step 4: Set up phase - play this arm until next epoch
         tau_next = self._tau(self.r[self.current_arm] + 1)
         self.phase_pulls_remaining = tau_next - self.counts[self.current_arm] - 1  # -1 for current pull
         
@@ -297,8 +279,8 @@ class UCB2Agent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Update μ̂_a incrementally after each reward
-        At end of phase: set r_a ← r_a + 1
+        Update counts and estimated means incrementally.
+        Also update epoch counter r_a if phase just completed.
         """
         self.counts[chosen_arm] += 1
         self.total_counts += 1
@@ -312,45 +294,40 @@ class UCB2Agent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "ucb2_values": [
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
+            "UCB 2 values per ARM": [
                 self.est_means[arm] + math.sqrt(((1 + self.alpha) * math.log(math.e * self.total_counts / self._tau(self.r[arm]))) / (2 * self._tau(self.r[arm])))
                 if self.counts[arm] > 0 else float('inf')
                 for arm in range(self.n_arms)
             ],
-            "bonuses": [
+            "'Confidence Padding' per Arm": [
                 math.sqrt(((1 + self.alpha) * math.log(math.e * self.total_counts / self._tau(self.r[arm]))) / (2 * self._tau(self.r[arm])))
                 if self.counts[arm] > 0 else float('inf')
                 for arm in range(self.n_arms)
             ],
-            "r": self.r,
-            "alpha": self.alpha,
-            "current_arm": self.current_arm,
-            "phase_pulls_remaining": self.phase_pulls_remaining
+            #"r": self.r,
         }
 
 
 class UCBTunedAgent(Agent):
     """
     UCB1-Tuned Algorithm
-    Reference: Algorithm box 6 in document
     """
     def __init__(self, n_arms):
         super().__init__(n_arms)
         # Initialization: Play each arm once to get μ̂_a(1) and m̂_a^(2)(1)
-        self.counts = [0] * n_arms  # N_a(t)
-        self.est_means = [0.0] * n_arms  # μ̂_a(t)
+        self.counts = [0] * n_arms  
+        self.est_means = [0.0] * n_arms  
         self.sum_squares = [0.0] * n_arms  # For computing empirical second moment
         self.total_counts = 0
 
     def select_arm(self):
         """
         Initialization: Play each arm once
-        Algorithm Step 1: Compute σ̂_a^2(t-1) = m̂_a^(2)(t-1) - (μ̂_a(t-1))^2
-                         V_a(t-1) = σ̂_a^2(t-1) + sqrt(2*log(t) / N_a(t-1))
-        Algorithm Step 2: Compute U_a(t) = μ̂_a(t-1) + sqrt((log(t)/N_a(t-1)) * min{1/4, V_a(t-1)})
-        Algorithm Step 3: Select A_t ∈ argmax_a U_a(t)
+        Compute mean and empirical variance estimates,
+        Introduce confidence to variance estimates,
+        Compute UCB-Tuned index for each arm using this confidence-adjusted variance,
         """
         # Initialization: play each arm once
         for arm in range(self.n_arms):
@@ -382,7 +359,7 @@ class UCBTunedAgent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Algorithm Step 3: Update N_a, μ̂_a, and m̂_a^(2) incrementally
+        Update counts, estimated means, and sum of squares incrementally.
         """
         self.counts[chosen_arm] += 1
         self.total_counts += 1
@@ -395,48 +372,47 @@ class UCBTunedAgent(Agent):
         # Update sum of squares for variance computation
         self.sum_squares[chosen_arm] += reward ** 2
 
-    def get_instance_values(self):
+    def get_instance_values(self): #TODO check infinities
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "ucb_tuned_values": [
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
+            "UCB Tuned Values of Arms": [
                 self.est_means[arm] + math.sqrt((math.log(self.total_counts) / self.counts[arm]) * min(0.25, 
                     max(0, (self.sum_squares[arm] / self.counts[arm]) - (self.est_means[arm] ** 2) + 
                     math.sqrt((2 * math.log(self.total_counts)) / self.counts[arm]))))
                 if self.counts[arm] > 0 else float('inf')
                 for arm in range(self.n_arms)
             ],
-            "bonuses": [
+            "'Confidence Padding' for Variance per Arm": [
                 math.sqrt((math.log(self.total_counts) / self.counts[arm]) * min(0.25, 
                     max(0, (self.sum_squares[arm] / self.counts[arm]) - (self.est_means[arm] ** 2) + 
                     math.sqrt((2 * math.log(self.total_counts)) / self.counts[arm]))))
                 if self.counts[arm] > 0 else float('inf')
                 for arm in range(self.n_arms)
             ],
-            "sum_squares": self.sum_squares,
-            "total_counts": self.total_counts
+            "Variance per Arm": [square_sum / count - (mean ** 2) if count > 0 else 0.0
+                         for square_sum, count, mean in zip(self.sum_squares, self.counts, self.est_means)],
         }
 
 
 class MossAgent(Agent):
     """
     MOSS Algorithm (Minimax Optimal Strategy in Stochastic)
-    Reference: Algorithm box 7 in document
     """
-    def __init__(self, n_arms, horizon):
+    def __init__(self, n_arms, horizon=10000):
         super().__init__(n_arms)
         self.horizon = horizon  # T (total number of rounds)
         # Initialization: Play each arm once
-        self.counts = [0] * n_arms  # N_a(t)
-        self.est_means = [0.0] * n_arms  # μ̂_a(t)
+        self.counts = [0] * n_arms  
+        self.est_means = [0.0] * n_arms  
         self.total_counts = 0
 
     def select_arm(self):
         """
         Initialization: Play each arm once
-        Algorithm Step 1: For each arm, compute
-                         U_a(t) = μ̂_a(t-1) + sqrt(max{0, log(T/(K*N_a(t-1)))} / N_a(t-1))
-        Algorithm Step 2: Select A_t ∈ argmax_a U_a(t)
+        Compute MOSS value for each arm,
+        The padding is sqrt(max{0, log(T/(K*N_a))} / N_a)
+        Select arm with maximum esimated mean + MOSS padding
         """
         # Initialization: play each arm once
         for arm in range(self.n_arms):
@@ -447,7 +423,7 @@ class MossAgent(Agent):
         moss_values = [0.0] * self.n_arms
         for arm in range(self.n_arms):
             n = self.counts[arm]
-            # U_a(t) = μ̂_a + sqrt(max{0, log(T/(K*N_a))} / N_a)
+            
             log_term = max(0, math.log(self.horizon / (self.n_arms * n)))
             exploration_bonus = math.sqrt(log_term / n)
             moss_values[arm] = self.est_means[arm] + exploration_bonus
@@ -467,27 +443,24 @@ class MossAgent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "moss_values": [
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
+            "Moss Values per Arm": [
                 self.est_means[arm] + math.sqrt(max(0, math.log(self.horizon / (self.n_arms * self.counts[arm]))) / self.counts[arm])
                 if self.counts[arm] > 0 else float('inf')
                 for arm in range(self.n_arms)
             ],
-            "bonuses": [
+            "'Confidence Padding' per Arm": [
                 math.sqrt(max(0, math.log(self.horizon / (self.n_arms * self.counts[arm]))) / self.counts[arm])
                 if self.counts[arm] > 0 else float('inf')
                 for arm in range(self.n_arms)
-            ],
-            "horizon": self.horizon,
-            "total_counts": self.total_counts
+            ]
         }
 
 
 class KLUCBAgent(Agent):
     """
     KL-UCB Algorithm (Bounded Rewards)
-    Reference: Algorithm box 8 in document
     """
     def __init__(self, n_arms, c=3.0):
         super().__init__(n_arms)
@@ -510,10 +483,7 @@ class KLUCBAgent(Agent):
     def select_arm(self):
         """
         Initialization: Play each arm once
-        Algorithm Step 1: For each arm, compute U_a(t) as solution to:
-                         U_a(t) = sup{q ∈ [μ̂_a, 1] : N_a * d(μ̂_a, q) ≤ f(t)}
-                         where f(t) = log(t) + c*log(log(t))
-        Algorithm Step 2: Select A_t ∈ argmax_a U_a(t)
+        Select arm with maximum KL-UCB value
         """
         # Initialization: play each arm once
         for arm in range(self.n_arms):
@@ -552,7 +522,7 @@ class KLUCBAgent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Algorithm Step 3: Update N_A_t and μ̂_A_t incrementally
+        Updart counts and estimated means incrementally.
         """
         self.counts[chosen_arm] += 1
         self.total_counts += 1
@@ -562,17 +532,14 @@ class KLUCBAgent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": self.est_means,
-            "counts": self.counts,
-            "c": self.c,
-            "total_counts": self.total_counts
+            "Estimated Arm Means": self.est_means,
+            "Count of Arm Pulls": self.counts,
         }
 
 
 class BayesUCBAgent(Agent):
     """
     Bayes-UCB Algorithm (Bernoulli Bandits)
-    Reference: Algorithm box 9 in document
     """
     def __init__(self, n_arms, alpha_0=1, beta_0=1, c=0.0):
         super().__init__(n_arms)
@@ -586,10 +553,10 @@ class BayesUCBAgent(Agent):
 
     def select_arm(self):
         """
-        Algorithm Step 1: For each arm, posterior is Beta(α_0 + S_a, β_0 + F_a)
-        Algorithm Step 2: Let q_t = 1 - 1/(t*(log(t))^c)
-        Algorithm Step 3: Compute U_a(t) = Q_{q_t}(Beta(α_0 + S_a, β_0 + F_a))
-        Algorithm Step 4: Select A_t ∈ argmax_a U_a(t)
+        For each arm, posterior is Beta(alpha_0 + S_a, beta_0 + F_a)
+        q_t = 1 - 1/(t*(log(t))^c)
+        Compute U_a(t) = Q_{q_t}(Beta(alpha_0 + S_a, beta_0 + F_a))
+        Select maximum arm
         """
         self.total_counts += 1
         
@@ -607,7 +574,7 @@ class BayesUCBAgent(Agent):
         # Step 3: Compute q_t-quantile of posterior Beta distribution for each arm
         ucb_values = [0.0] * self.n_arms
         for arm in range(self.n_arms):
-            # Posterior: Beta(α_0 + S_a, β_0 + F_a)
+            # Posterior
             alpha = self.alpha_0 + self.successes[arm]
             beta = self.beta_0 + self.failures[arm]
             
@@ -619,9 +586,7 @@ class BayesUCBAgent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Algorithm Step 5: Observe X_t ∈ {0,1} and update
-        S_A_t(t) = S_A_t(t-1) + X_t
-        F_A_t(t) = F_A_t(t-1) + (1 - X_t)
+        Observation Step: Update S_a and F_a based on observed reward
         """
         if reward >= 0.5:  # Treat as success
             self.successes[chosen_arm] += 1
@@ -630,22 +595,20 @@ class BayesUCBAgent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": [
+            "Estimated Arm Means": [
                 (self.alpha_0 + self.successes[arm]) / (self.alpha_0 + self.beta_0 + self.successes[arm] + self.failures[arm])
                 for arm in range(self.n_arms)
             ],
-            "successes": self.successes,
-            "failures": self.failures,
-            "alpha_0": self.alpha_0,
-            "beta_0": self.beta_0,
-            "total_counts": self.total_counts
+            "+1 Reward per Arm": self.successes,
+            "0 Reward per Arm": self.failures,
+            #"Alpha Values per Arm": self.alpha_0,
+            #"Beta Values per Arm": self.beta_0,
         }
 
 
 class ThompsonSamplingAgent(Agent):
     """
     Thompson Sampling (Bernoulli Bandits)
-    Reference: Algorithm box 10 in document
     """
     def __init__(self, n_arms, alpha_0=1, beta_0=1):
         super().__init__(n_arms)
@@ -657,14 +620,14 @@ class ThompsonSamplingAgent(Agent):
 
     def select_arm(self):
         """
-        Algorithm Step 1: For each arm, form posterior Beta(α_0 + S_a, β_0 + F_a)
-        Algorithm Step 2: Sample θ̃_a(t) ~ Beta(α_0 + S_a, β_0 + F_a)
-        Algorithm Step 3: Select A_t ∈ argmax_a θ̃_a(t)
+        For each arm, form posterior Beta(alpha_0 + S_a, beta_0 + F_a)
+        Sample from ~ the posterior 
+        Select arm with maximum sampled value
         """
         sampled_theta = [0.0] * self.n_arms
         
         for arm in range(self.n_arms):
-            # Step 1 & 2: Sample from posterior Beta(α_0 + S_a, β_0 + F_a)
+            # Step 1 & 2: Sample from posterior Beta(alpha_0 + S_a, beta_0 + F_a)
             alpha = self.alpha_0 + self.successes[arm]
             beta = self.beta_0 + self.failures[arm]
             sampled_theta[arm] = random.betavariate(alpha, beta)
@@ -674,9 +637,7 @@ class ThompsonSamplingAgent(Agent):
 
     def update(self, chosen_arm, reward):
         """
-        Algorithm Step 4: Observe X_t ∈ {0,1} and update
-        S_A_t(t) = S_A_t(t-1) + X_t
-        F_A_t(t) = F_A_t(t-1) + (1 - X_t)
+        Update Successes and Failures based on observed reward
         """
         if reward >= 0.5:  # Treat as success (for Bernoulli: reward = 1)
             self.successes[chosen_arm] += 1
@@ -685,12 +646,12 @@ class ThompsonSamplingAgent(Agent):
 
     def get_instance_values(self):
         return {
-            "est_means": [
+            "Estimated Arm Means": [
                 (self.alpha_0 + self.successes[arm]) / (self.alpha_0 + self.beta_0 + self.successes[arm] + self.failures[arm])
                 for arm in range(self.n_arms)
             ],
-            "successes": self.successes,
-            "failures": self.failures,
-            "alpha_0": self.alpha_0,
-            "beta_0": self.beta_0
+            "+1 Pulls": self.successes,
+            "0 Pulls": self.failures,
+            #"Alpha Value per Arm": self.alpha_0,
+            #"Beta Value per Arm": self.beta_0
         }

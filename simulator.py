@@ -48,6 +48,10 @@ class MAB_preload():
                 arm_values.append(self.arm_distributions[iter_arm]())
             
             self.upcoming_values.append(arm_values)
+
+    def get_upcoming_rewards(self):
+        """Get future rewards"""
+        return self.upcoming_values[0]
     
     def play_arm(self, arm):
         """Simulate playing an arm and getting a reward."""
