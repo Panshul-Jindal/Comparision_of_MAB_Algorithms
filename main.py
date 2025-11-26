@@ -8,7 +8,7 @@ import distributions
 import simulator
 import agents
 
-import imageio as iio
+import imageio.v2 as iio
 
 import copy
 
@@ -35,19 +35,20 @@ def makeLatestRunDirectory(base_dir=r"Runs/NamelessRuns"):
 
 def run(agent, mab, n_iterations, agent_name=None, mab_name=None, instance_id=None, skipAnim=False):
 
-    if agent_name is None or mab_name is None:
-        if not os.path.exists(r"Runs/NamelessRuns"):
-            os.makedirs(r"Runs/NamelessRuns")
-            print(f"Created directory: NamelessRuns")
-        latest_run_dir = makeLatestRunDirectory(r"Runs/NamelessRuns")
-    else:
-        if not os.path.exists(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name)):
-            os.makedirs(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
-            print(f"Created directory: {agent_name + '_' + mab_name}")
-        latest_run_dir = makeLatestRunDirectory(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
-        if instance_id is not None:
-            latest_run_dir = os.path.join(latest_run_dir, f"{instance_id}")
-            os.makedirs(latest_run_dir)
+    if not skipAnim:
+        if agent_name is None or mab_name is None:
+            if not os.path.exists(r"Runs/NamelessRuns"):
+                os.makedirs(r"Runs/NamelessRuns")
+                print(f"Created directory: NamelessRuns")
+            latest_run_dir = makeLatestRunDirectory(r"Runs/NamelessRuns")
+        else:
+            if not os.path.exists(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name)):
+                os.makedirs(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
+                print(f"Created directory: {agent_name + '_' + mab_name}")
+            latest_run_dir = makeLatestRunDirectory(os.path.join(BASE_RUN_DIR, agent_name + "_" + mab_name))
+            if instance_id is not None:
+                latest_run_dir = os.path.join(latest_run_dir, f"{instance_id}")
+                os.makedirs(latest_run_dir)
 
     instance_internal_info = []
     choices = []
@@ -134,6 +135,7 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None, instance_id=No
         axes[1].plot(range(1,n_iterations+1), arm3_reward_seq_sum, color='b', label="Arm 3")
         axes[1].set_xlabel("Iterations")
         axes[1].set_ylabel("Hidden Arm Rewards")
+        axes[1].legend(fontsize=4)
         axes[1].set_title(f"Reward vs Iterations Arm")
 
         
@@ -172,7 +174,7 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None, instance_id=No
         fig.subplots_adjust(hspace=0.5, wspace=0.3)
         
         fig.suptitle(f"Results for {agent_name}_{mab_name}_{instance_id}", fontsize=14)
-        fig.savefig(os.path.join(latest_run_dir,'result.jpg'))
+        fig.savefig(os.path.join(latest_run_dir,'result.jpg'), dpi=900)
         plt.close(fig)
         
 
@@ -180,8 +182,8 @@ def run(agent, mab, n_iterations, agent_name=None, mab_name=None, instance_id=No
     return np.array(agent_reward_seq), instance_internal_info, np.array(agent_reward_seq_sum), np.array(regret_seq)
 
 if __name__ == "__main__":
-    INSTANCES_TO_RUN = 3
-    ITERATION_COUNT = 1000
+    INSTANCES_TO_RUN = 100
+    ITERATION_COUNT = 2500
     # Creating our MAB environment
 
 
@@ -207,7 +209,7 @@ if __name__ == "__main__":
     randomAgentCreator       = lambda x : agents.RandomAgent(n_arms=3)
     epsilonGreedyAgentCreator       = lambda x : agents.EpsilonGreedyAgent(n_arms=3)
     epsilonDecreasingAgentCreator   = lambda x : agents.EpsilonDecreasingAgent(n_arms=3)
-    ExplorationFirstAgentCreator    = lambda x : agents.ExplorationFirstAgent(n_arms=3, m=500)
+    ExplorationFirstAgentCreator    = lambda x : agents.ExplorationFirstAgent(n_arms=3, m=ITERATION_COUNT//10)
     ucb1AgentCreator                = lambda x : agents.UCB1Agent(n_arms=3)
     ucb2AgentCreator                = lambda x : agents.UCB2Agent(n_arms=3)
     ucbTunedAgentCreator            = lambda x : agents.UCBTunedAgent(n_arms=3)
@@ -231,21 +233,29 @@ if __name__ == "__main__":
 
     # Simulating interaction for FAR mab
     sim_start_time = time.time()
+
+    # FAR
+
+    print("Starting Simulation on Far")
     for agent_name, agent_maker in agents_to_test[:]:
         print(f"Running simulations for Agent: {agent_name} on Far MAB")
         agent_start_time = time.time()
-        curr_agent = agent_maker(None)
         agent_rewards_all_instances = []
         agent_info_all_instances = []
         agent_rew_sum_all = []
         agent_regret_seq_all = []
+        skip_stuff = INSTANCES_TO_RUN//5
+        if skip_stuff < 1:
+            skip_stuff = 1
         for instance_id in range(INSTANCES_TO_RUN):
+            curr_agent = agent_maker(None)
             instance_rewards, instance_info, instance_rew_sum, instance_regret_seq = run(curr_agent, 
                                                                                             mab_far, 
                                                                                             n_iterations=ITERATION_COUNT, 
                                                                                             agent_name=f"{agent_name}", 
                                                                                             mab_name="BernoulliMABFar", 
-                                                                                            instance_id=instance_id)
+                                                                                            instance_id=instance_id,
+                                                                                            skipAnim=(instance_id%skip_stuff != 0))
             
             agent_rewards_all_instances.append(instance_rewards)
             agent_info_all_instances.append(instance_info)
@@ -286,13 +296,13 @@ if __name__ == "__main__":
             ax.set_ylabel(key)
             ax.legend()
 
-        agent_plot_dir = os.path.join(BASE_PLOT_DIR, agent_name)
+        agent_plot_dir = os.path.join(BASE_PLOT_DIR, agent_name+"_"+"Far")
         plot_dir = makeLatestRunDirectory(agent_plot_dir)
         info_plot_path = os.path.join(plot_dir, "Info")
 
 
 
-        plt.savefig(info_plot_path)
+        plt.savefig(info_plot_path,dpi=900)
         plt.close()
           
         mean_agent_regret = np.mean(np.array(agent_regret_seq_all), axis = 0)
@@ -302,7 +312,87 @@ if __name__ == "__main__":
         plt.xlabel("Iterations")
         plt.ylabel("Regret")
         plt.title(f"Average Regret of {agent_name} on BernoulliMAB Far")
-        plt.savefig(os.path.join(plot_dir, "Regret"))
+        plt.savefig(os.path.join(plot_dir, "Regret"), dpi=900)
+        plt.close()    
+
+
+    # CLOSE
+    for agent_name, agent_maker in agents_to_test[:]:
+        print(f"Running simulations for Agent: {agent_name} on Near MAB")
+        agent_start_time = time.time()
+        agent_rewards_all_instances = []
+        agent_info_all_instances = []
+        agent_rew_sum_all = []
+        agent_regret_seq_all = []
+        skip_stuff = INSTANCES_TO_RUN//5
+        if skip_stuff < 1:
+            skip_stuff = 1
+        for instance_id in range(INSTANCES_TO_RUN):
+            curr_agent = agent_maker(None)
+            instance_rewards, instance_info, instance_rew_sum, instance_regret_seq = run(curr_agent, 
+                                                                                            mab_far, 
+                                                                                            n_iterations=ITERATION_COUNT, 
+                                                                                            agent_name=f"{agent_name}", 
+                                                                                            mab_name="BernoulliMABClose", 
+                                                                                            instance_id=instance_id,
+                                                                                            skipAnim=(instance_id%skip_stuff != 0))
+            
+            agent_rewards_all_instances.append(instance_rewards)
+            agent_info_all_instances.append(instance_info)
+            agent_rew_sum_all.append(instance_rew_sum)
+            agent_regret_seq_all.append(instance_regret_seq)
+        
+        keys = list(agent_info_all_instances[0][0].keys())
+
+        agent_info = []
+        for iteration in range(ITERATION_COUNT):
+            iter_info = {}
+            for key in keys:
+                iter_info[key] = np.mean([agent_info_all_instances[inst_id][iteration][key] for inst_id in range(INSTANCES_TO_RUN)], axis=0)
+            agent_info.append(iter_info)
+
+        fig, axes = plt.subplots(2, int(np.ceil(len(keys)/2)), figsize=(5 * int(np.ceil(len(keys) / 2)), 10))
+        axes = axes.flatten()
+
+        colors = ['r', 'g', 'b']  # or use any colormap
+        labels = ['Arm 1', 'Arm 2', 'Arm 3']  # adjust based on meaning
+
+        for key_id in range(len(keys)):
+            key = keys[key_id]
+            values = [agent_info[iteration][key] for iteration in range(ITERATION_COUNT)]
+            ax = axes[key_id]
+
+            # Plot each series with color and label
+            for i in range(len(values[0])):  # assuming 3 values in each iteration
+                ax.plot(
+                    [values[j][i] for j in range(ITERATION_COUNT)], 
+                    label=labels[i], 
+                    color=colors[i]
+                )
+
+            # Add title and legend
+            ax.set_title(f"{key} for {agent_name} Agent")
+            ax.set_xlabel("Iterations")
+            ax.set_ylabel(key)
+            ax.legend()
+
+        agent_plot_dir = os.path.join(BASE_PLOT_DIR, agent_name+"_"+"Near")
+        plot_dir = makeLatestRunDirectory(agent_plot_dir)
+        info_plot_path = os.path.join(plot_dir, "Info")
+
+
+
+        plt.savefig(info_plot_path,dpi=900)
+        plt.close()
+          
+        mean_agent_regret = np.mean(np.array(agent_regret_seq_all), axis = 0)
+        
+        plt.figure()
+        plt.plot(range(1, ITERATION_COUNT+1), mean_agent_regret)
+        plt.xlabel("Iterations")
+        plt.ylabel("Regret")
+        plt.title(f"Average Regret of {agent_name} on BernoulliMAB Near")
+        plt.savefig(os.path.join(plot_dir, "Regret"), dpi=900)
         plt.close()    
 
         
