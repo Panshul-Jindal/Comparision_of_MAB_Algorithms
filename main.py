@@ -330,10 +330,10 @@ if __name__ == "__main__":
         for instance_id in range(INSTANCES_TO_RUN):
             curr_agent = agent_maker(None)
             instance_rewards, instance_info, instance_rew_sum, instance_regret_seq = run(curr_agent, 
-                                                                                            mab_far, 
+                                                                                            mab_close, 
                                                                                             n_iterations=ITERATION_COUNT, 
                                                                                             agent_name=f"{agent_name}", 
-                                                                                            mab_name="BernoulliMABClose", 
+                                                                                            mab_name="BernoulliMABNear", 
                                                                                             instance_id=instance_id,
                                                                                             skipAnim=(instance_id%skip_stuff != 0))
             
